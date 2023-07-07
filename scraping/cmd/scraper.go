@@ -1,14 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/tidwall/gjson"
 )
 
 func main() {
@@ -21,14 +23,27 @@ func main() {
 	// Get the API key from the environment variables
 	apiKey := os.Getenv("NEWS_API_KEY")
 
+	// Calculate the date range for the past week
+	now := time.Now()
+	weekAgo := now.AddDate(0, 0, -7)
+	from := weekAgo.Format("2006-01-02")
+	to := now.Format("2006-01-02")
+
 	// Make the API request
-	u := "https://newsapi.org/v2/top-headlines"
-	params := url.Values{
-		"country": {"it"},
-		"apiKey":  {apiKey},
+	u, err := url.Parse("https://newsapi.org/v2/top-headlines")
+	if err != nil {
+		log.Fatal("Error parsing the URL")
 	}
 
-	resp, err := http.Get(u + "?" + params.Encode())
+	params := url.Values{
+		"country": {"us"},
+		"apiKey":  {apiKey},
+		"from":    {from},
+		"to":      {to},
+	}
+	u.RawQuery = params.Encode()
+
+	resp, err := http.Get(u.String())
 	if err != nil {
 		log.Fatal("Error making the request:", err)
 	}
@@ -38,17 +53,16 @@ func main() {
 	if resp.StatusCode != http.StatusOK {
 		log.Fatal("Error:", resp.Status)
 	}
-	var data map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		log.Fatal("Error decoding response:", err)
+
+	resContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading the body:", err)
 	}
 
-	// Extract and display the news articles
-	articles := data["articles"].([]interface{})
-	for _, article := range articles {
-		articleMap := article.(map[string]interface{})
-		title := articleMap["title"].(string)
-		source := articleMap["source"].(map[string]interface{})["name"].(string)
-		fmt.Printf("%s - %s\n", title, source)
-	}
+	value := gjson.GetBytes(resContent, "articles.#.content")
+	value.ForEach(func(key, value gjson.Result) bool {
+		fmt.Println(value)
+		fmt.Println("------")
+		return true
+	})
 }
