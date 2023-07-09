@@ -108,8 +108,11 @@ print("Classification completed successfully and saved as output.csv!")
 import time
 import openai
 import csv
+from dotenv import load_dotenv
 
-openai.api_key = ''  # Replace with your API key
+load_dotenv()
+
+openai.api_key = os.getenv("OPENAI_KEY")
 
 
 # Function to summarize the article using ChatGPT
