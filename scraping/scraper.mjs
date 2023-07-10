@@ -7,13 +7,13 @@ import fs from 'fs';
 
 // Get the API key from the environment variables
 const apiKey = process.env.NEWS_API_KEY;
-const outPath = process.env.OUT || `dump-${new Date().toISOString()}.json`;
+const outPath = process.env.OUT || `dump.json`;
+const now = Date.parse(process.env.DATE) || new Date();
 
 // Calculate the date range for the past week
-const now = new Date();
 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 const from = weekAgo.toISOString().split('T')[0];
-const to = now.toISOString().split('T')[0];
+const to = now.toString().split('T')[0];
 const language='en'
 const q='news'
 
