@@ -1,32 +1,57 @@
+import datetime
+from googlesearch import search, get_tbs
+
+import time
+import random
+import yake
 import spacy
-from serpapi import GoogleSearch
-from dotenv import load_dotenv
+import json
 
-import os
-
-load_dotenv()
+# Read the JSON file
+with open('data.json', 'r', encoding='utf-8') as file:
+    data = json.load(file)
 
 nlp = spacy.load("en_core_web_sm")
+kw_extractor = yake.KeywordExtractor(top=10, stopwords=None)
+nlp = spacy.load("en_core_web_sm")
 
-text = """spaCy is an open-source software library for advanced natural language processing, 
-written in the programming languages Python and Cython. The library is published under the MIT license
-and its main developers are Matthew Honnibal and Ines Montani, the founders of the software company Explosion."""
+for obj in data:
+    val = obj["summary"]
 
-doc = nlp(text)
+    keywords = kw_extractor.extract_keywords(val)[:1]
 
-kek = []
-for x in doc.ents:
-    kek.append(x.root.__str__())
+    doc = nlp(val)
 
-print(kek)
+    keywords.append(
+        [ent.text.lower() for ent in doc.ents if ent.label_ in ['PERSON', 'ORG', 'GPE']][:2]
+    )
 
-params = {
-  "engine": "google_trends",
-  "q": kek,
-  "data_type": "TIMESERIES",
-  "api_key": os.getenv("SERPAPI_KEY")
-}
 
-search = GoogleSearch(params)
-results = search.get_dict()
-interest_over_time = results["interest_over_time"]
+    query = ""
+    for x in keywords:
+        query += (" " + x[0]) if len(x) > 0 else ""
+
+    print(query)
+    
+    url_count=0
+    for url in search(
+        query, 
+        num=20,
+        start=0,
+        pause=0.5,
+        stop=None,
+        tbs=get_tbs(
+            datetime.date.today(),
+            datetime.date.today() - datetime.timedelta(days=7)
+        )
+    ):
+        time.sleep(random.randint(3,9)/200)
+        url_count += 1
+
+    time.sleep(random.randint(1,3))
+    obj["urls_found"] = url_count
+    print("found urls:", url_count)
+
+# Write the updated data back to the JSON file
+with open('output.json', 'w') as file:
+    json.dump(data, file)
