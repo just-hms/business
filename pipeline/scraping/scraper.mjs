@@ -59,6 +59,7 @@ for (const article of response.data.articles) {
             content : articleContent.textContent
         };
 
+        console.log(`${article.url}\t${article.title}`);
         dataset.push(articleInfo)
 
     } catch (error) {
